@@ -3,6 +3,7 @@ package jp.techacademy.kousuke.koizumi.qa_app;
 import android.content.Intent;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.View;
 import android.widget.ListView;
@@ -16,6 +17,7 @@ import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.HashMap;
+import java.util.Map;
 
 public class QuestionDetailActivity extends AppCompatActivity {
 
@@ -23,9 +25,12 @@ public class QuestionDetailActivity extends AppCompatActivity {
     private Question mQuestion;
     private QuestionDetailListAdapter mAdapter;
 
-    private DatabaseReference mFavoriteRef; //★追加
     private DatabaseReference mAnswerRef;
 
+    private DatabaseReference mFavoriteRef; //★追加
+    private boolean favoriteFlag = false; //★追加
+    private FloatingActionButton fabFavorite; //★追加
+    private FirebaseUser mUser; //★追加
 
     private ChildEventListener mEventListener = new ChildEventListener() {
         @Override
@@ -72,6 +77,38 @@ public class QuestionDetailActivity extends AppCompatActivity {
         }
     };
 
+    private ChildEventListener mFavoriteEventListener = new ChildEventListener() {
+        //★ボタン処理用のクラスブロック
+
+        @Override
+        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+
+            fabFavorite.setImageResource(android.R.drawable.btn_star_big_off);
+            favoriteFlag = true;
+
+                    }
+
+        @Override
+        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+
+        }
+
+        @Override
+        public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+        }
+
+        @Override
+        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+        }
+
+        @Override
+        public void onCancelled(DatabaseError databaseError) {
+
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -89,29 +126,21 @@ public class QuestionDetailActivity extends AppCompatActivity {
         mListView.setAdapter(mAdapter);
         mAdapter.notifyDataSetChanged();
 
-        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        mUser = FirebaseAuth.getInstance().getCurrentUser(); //★追加
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
-        FloatingActionButton fabOff = (FloatingActionButton) findViewById(R.id.fabOff); //★お気に入り未登録時のボタン
-        FloatingActionButton fabOn = (FloatingActionButton) findViewById(R.id.fabOn); //★お気に入り登録時のボタン
+        fabFavorite = (FloatingActionButton) findViewById(R.id.fabFavorite); //★お気に入り登録ボタン定義
 
-        if(user == null) {
-           fabOff.setVisibility(View.GONE);
-           fabOn.setVisibility(View.GONE);
-        } else if ( 1 == 1 //★エラーをださないためのダミーの条件式
-            //★Firebase読込み→お気に入り登録されているかの判断
-            // DatabaseReference mDataBaseReference = FirebaseDatabase.getInstance().getReference();
-            // mFavoriteRef = mDataBaseReference.child(Const.FavoritePATH).child(user.get.Uid()).child(mQuestion.getQuestionUid());
-            // mFavoriteRef.addChildEventListener(mFavoriteEventListener);
-            // ★ここがうまくできない…
-                ) {
-            fabOff.setVisibility(View.VISIBLE); //★お気に入り未登録時のボタンを表示
-            fabOn.setVisibility(View.GONE);
+        if(mUser == null) {
+            fabFavorite.setVisibility(View.GONE);
         } else {
-            fabOn.setVisibility(View.VISIBLE); //★お気に入り登録時のボタンを表示
-            fabOff.setVisibility(View.GONE);
-        } //★"intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);"と"ClipData clipData = data.getClipData();"を使う？
-          //★"try～catch"も使う？
+            //★Firebase読込み→お気に入り登録されているかの判断
+            DatabaseReference mDataBaseReference = FirebaseDatabase.getInstance().getReference();
+            mFavoriteRef = mDataBaseReference.child(Const.FavoritePATH).child(mUser.getUid()).child(mQuestion.getQuestionUid());
+            mFavoriteRef.addChildEventListener(mFavoriteEventListener);
+
+            fabFavorite.setVisibility(View.VISIBLE); //★お気に入り登録ボタン表示
+        }
 
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -132,23 +161,35 @@ public class QuestionDetailActivity extends AppCompatActivity {
             }
         });
 
-        fabOff.setOnClickListener(new View.OnClickListener() { //★お気に入り未登録ボタンをクリック
+        fabFavorite.setOnClickListener(new View.OnClickListener() { //★お気に入り未登録ボタンをクリック
             @Override
             public void onClick(View view) {
-                //★Firebase書込み→お気に入り登録・保存
-                // DatabaseReference dataBaseReference = FirebaseDatabase.getInstance().getReference();
-                // DatabaseReference genreRef = dataBaseReference.child(Const.FavoritePATH).child(String.valueOf(mGenre));
-                // ★ここもうまくできない…
-            }
-        });
+                // ★お気に入り登録・解除を実施
 
-        fabOn.setOnClickListener(new View.OnClickListener() { //★お気に入り登録ボタンをクリック
-            @Override
-            public void onClick(View view) {
-                //★Firebase書込み→お気に入り削除・保存
-                // DatabaseReference dataBaseReference = FirebaseDatabase.getInstance().getReference();
-                // DatabaseReference genreRef = dataBaseReference.child(Const.FavoritePATH).child(String.valueOf(mGenre));
-                // ★ここもうまくできない…
+                if (favoriteFlag == true) {
+                    DatabaseReference dataBaseReference = FirebaseDatabase.getInstance().getReference();
+                    DatabaseReference favoriteRef = dataBaseReference.child(Const.FavoritePATH).child(mUser.getUid()).child(mQuestion.getQuestionUid());
+                    favoriteRef.removeValue();
+
+                    Snackbar.make(findViewById(android.R.id.content), "お気に入り解除しました。", Snackbar.LENGTH_LONG).show();
+
+                    fabFavorite.setImageResource(android.R.drawable.btn_star_big_on);
+
+                    favoriteFlag = false;
+                } else {
+                    DatabaseReference dataBaseReference = FirebaseDatabase.getInstance().getReference();
+                    DatabaseReference favoriteRef = dataBaseReference.child(Const.FavoritePATH).child(mUser.getUid()).child(mQuestion.getQuestionUid());
+                    Map<String, String> data = new HashMap<String, String>();
+                    String genre = String.valueOf(mQuestion.getGenre());
+                    data.put("genre", genre);
+                    favoriteRef.setValue(data);
+
+                    Snackbar.make(findViewById(android.R.id.content), "お気に入りに登録しました。", Snackbar.LENGTH_LONG).show();
+
+                    fabFavorite.setImageResource(android.R.drawable.btn_star_big_off);
+                    favoriteFlag = true;
+
+                }
             }
         });
 

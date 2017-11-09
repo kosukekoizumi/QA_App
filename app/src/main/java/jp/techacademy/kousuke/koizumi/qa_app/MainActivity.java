@@ -39,7 +39,87 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<Question> mQuestionArrayList;
     private QuestionsListAdapter mAdapter;
 
+    private String mFavoriteUid; //★追加？お気に入り比較用ID
+    private ArrayList<Question> mFavoriteQuestionArrayList; //★追加？
+
     private ChildEventListener mEventListener = new ChildEventListener() {
+        @Override
+        public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+            HashMap map = (HashMap) dataSnapshot.getValue();
+            String title = (String) map.get("title");
+            String body = (String) map.get("body");
+            String name = (String) map.get("name");
+            String uid = (String) map.get("uid");
+            String imageString = (String) map.get("image");
+            byte[] bytes;
+            if (imageString != null) {
+                bytes = Base64.decode(imageString, Base64.DEFAULT);
+            } else {
+                bytes = new byte[0];
+            }
+
+            ArrayList<Answer> answerArrayList = new ArrayList<Answer>();
+            HashMap answerMap = (HashMap) map.get("answers");
+            if (answerMap != null) {
+                for (Object key : answerMap.keySet()) {
+                    HashMap temp = (HashMap) answerMap.get((String) key);
+                    String answerBody = (String) temp.get("body");
+                    String answerName = (String) temp.get("name");
+                    String answerUid = (String) temp.get("uid");
+                    Answer answer = new Answer(answerBody, answerName, answerUid, (String) key);
+                    answerArrayList.add(answer);
+                }
+            }
+
+            Question question = new Question(title, body, name, uid, dataSnapshot.getKey(), mGenre, bytes, answerArrayList);
+            mQuestionArrayList.add(question);
+            mAdapter.notifyDataSetChanged();
+        }
+
+        @Override
+        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+            HashMap map = (HashMap) dataSnapshot.getValue();
+
+            // 変更があったQuestionを探す
+            for (Question question: mQuestionArrayList) {
+                if (dataSnapshot.getKey().equals(question.getQuestionUid())) {
+                    // このアプリで変更がある可能性があるのは回答(Answer)のみ
+                    question.getAnswers().clear();
+                    HashMap answerMap = (HashMap) map.get("answers");
+                    if (answerMap != null) {
+                        for (Object key : answerMap.keySet()) {
+                            HashMap temp = (HashMap) answerMap.get((String) key);
+                            String answerBody = (String) temp.get("body");
+                            String answerName = (String) temp.get("name");
+                            String answerUid = (String) temp.get("uid");
+                            Answer answer = new Answer(answerBody, answerName, answerUid, (String) key);
+                            question.getAnswers().add(answer);
+                        }
+                    }
+
+                    mAdapter.notifyDataSetChanged();
+                }
+            }
+        }
+
+        @Override
+        public void onChildRemoved(DataSnapshot dataSnapshot) {
+
+        }
+
+        @Override
+        public void onChildMoved(DataSnapshot dataSnapshot, String s) {
+
+        }
+
+        @Override
+        public void onCancelled(DatabaseError databaseError) {
+
+        }
+    };
+
+    // ★以下、122～196行でお気に入り一覧画面へ遷移の処理を書きたい
+    private ChildEventListener mFavoriteEventListener = new ChildEventListener() {
         @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
             HashMap map = (HashMap) dataSnapshot.getValue();
@@ -172,7 +252,11 @@ public class MainActivity extends AppCompatActivity {
                 } else if (id == R.id.nav_compter) {
                     mToolbar.setTitle("コンピューター");
                     mGenre = 4;
+                } else if (id == R.id.nav_favorite) {
+                    mToolbar.setTitle("★お気に入り"); //★追加
+                    mGenre = 5;
                 }
+
 
                 DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
                 drawer.closeDrawer(GravityCompat.START);
