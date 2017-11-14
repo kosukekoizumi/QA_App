@@ -27,6 +27,9 @@ import com.google.firebase.database.FirebaseDatabase;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Map;
+
+import static android.R.attr.key;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -39,8 +42,11 @@ public class MainActivity extends AppCompatActivity {
     private ArrayList<Question> mQuestionArrayList;
     private QuestionsListAdapter mAdapter;
 
-    private String mFavoriteUid; //★追加？お気に入り比較用ID
-    private ArrayList<Question> mFavoriteQuestionArrayList; //★追加？
+    NavigationView navigationView;
+
+    public static Map<String,String> sFavoriteQidMap;
+    private String mFavoriteUid;
+    private ArrayList<Question> mFavoriteQuestionArrayList; //★
 
     private ChildEventListener mEventListener = new ChildEventListener() {
         @Override
@@ -118,66 +124,60 @@ public class MainActivity extends AppCompatActivity {
         }
     };
 
-    // ★以下、122～196行でお気に入り一覧画面へ遷移の処理を書きたい
-    private ChildEventListener mFavoriteEventListener = new ChildEventListener() {
+    private ChildEventListener mFavoriteListener = new ChildEventListener() {
         @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
+
             HashMap map = (HashMap) dataSnapshot.getValue();
-            String title = (String) map.get("title");
-            String body = (String) map.get("body");
-            String name = (String) map.get("name");
-            String uid = (String) map.get("uid");
-            String imageString = (String) map.get("image");
-            byte[] bytes;
-            if (imageString != null) {
-                bytes = Base64.decode(imageString, Base64.DEFAULT);
-            } else {
-                bytes = new byte[0];
-            }
+            String genre = (String) map.get("genre");
+            sFavoriteQidMap.put(dataSnapshot.getKey(), genre);
 
-            ArrayList<Answer> answerArrayList = new ArrayList<Answer>();
-            HashMap answerMap = (HashMap) map.get("answers");
-            if (answerMap != null) {
-                for (Object key : answerMap.keySet()) {
-                    HashMap temp = (HashMap) answerMap.get((String) key);
-                    String answerBody = (String) temp.get("body");
-                    String answerName = (String) temp.get("name");
-                    String answerUid = (String) temp.get("uid");
-                    Answer answer = new Answer(answerBody, answerName, answerUid, (String) key);
-                    answerArrayList.add(answer);
-                }
-            }
-
-            Question question = new Question(title, body, name, uid, dataSnapshot.getKey(), mGenre, bytes, answerArrayList);
-            mQuestionArrayList.add(question);
-            mAdapter.notifyDataSetChanged();
         }
+
+        // ★ ここから176行目までお気に入り一覧画面へ遷移の処理
+
+        ArrayList<Answer> mFavoriteQuestionArrayList = new ArrayList<Answer>();
+            if (sFavoriteQidMap != null) {
+            for (Object key : sFavoriteQidMap.keySet()) {
+                HashMap temp = (HashMap) sFavoriteQidMap.get((String) key);
+                String answerBody = (String) temp.get("body");
+                String answerName = (String) temp.get("name");
+                String answerUid = (String) temp.get("uid");
+                Answer favorite = new Answer(answerBody, answerName, answerUid, (String) key);
+                mFavoriteQuestionArrayList.add(favorite);
+            }
+        }
+
+        Question favorite = new Question(title, body, name, uid, dataSnapshot.getKey(), mGenre, bytes, mFavoriteQuestionArrayList);
+            mFavoriteQuestionArrayList.add(favorite);
+            mAdapter.notifyDataSetChanged();
+
+    @Override
+    public void onChildChanged(DataSnapshot dataSnapshot, String s) {
+        HashMap map = (HashMap) dataSnapshot.getValue();
+
+        for (Question favorite: mFavoriteQuestionArrayList) {
+            if (dataSnapshot.getKey().equals(sFavoriteQidMap.get((String) key) {
+                 favorite.getAnswers().clear();
+                if (sFavoriteQidMap != null) {
+                    for (Object key : sFavoriteQidMap.keySet()) {
+                        HashMap temp = (HashMap) sFavoriteQidMap.get((String) key);
+                        String answerBody = (String) temp.get("body");
+                        String answerName = (String) temp.get("name");
+                        String answerUid = (String) temp.get("uid");
+                        Answer favorite = new Answer(answerBody, answerName, answerUid, (String) key);
+                        mFavoriteQuestionArrayList.add(favorite);
+                    }
+                }
+
+                mAdapter.notifyDataSetChanged();
+            }
+        }
+    }
 
         @Override
         public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-            HashMap map = (HashMap) dataSnapshot.getValue();
-
-            // 変更があったQuestionを探す
-            for (Question question: mQuestionArrayList) {
-                if (dataSnapshot.getKey().equals(question.getQuestionUid())) {
-                    // このアプリで変更がある可能性があるのは回答(Answer)のみ
-                    question.getAnswers().clear();
-                    HashMap answerMap = (HashMap) map.get("answers");
-                    if (answerMap != null) {
-                        for (Object key : answerMap.keySet()) {
-                            HashMap temp = (HashMap) answerMap.get((String) key);
-                            String answerBody = (String) temp.get("body");
-                            String answerName = (String) temp.get("name");
-                            String answerUid = (String) temp.get("uid");
-                            Answer answer = new Answer(answerBody, answerName, answerUid, (String) key);
-                            question.getAnswers().add(answer);
-                        }
                     }
-
-                    mAdapter.notifyDataSetChanged();
-                }
-            }
-        }
 
         @Override
         public void onChildRemoved(DataSnapshot dataSnapshot) {
@@ -234,7 +234,7 @@ public class MainActivity extends AppCompatActivity {
         drawer.addDrawerListener(toggle);
         toggle.syncState();
 
-        NavigationView navigationView = (NavigationView) findViewById(R.id.nav_view);
+        navigationView = (NavigationView) findViewById(R.id.nav_view);
         navigationView.setNavigationItemSelectedListener(new NavigationView.OnNavigationItemSelectedListener() {
             @Override
             public boolean onNavigationItemSelected(MenuItem item) {
@@ -253,26 +253,29 @@ public class MainActivity extends AppCompatActivity {
                     mToolbar.setTitle("コンピューター");
                     mGenre = 4;
                 } else if (id == R.id.nav_favorite) {
-                    mToolbar.setTitle("★お気に入り"); //★追加
-                    mGenre = 5;
+                    mGenre = 0;
+                    Intent intent = new Intent(getApplicationContext(), FavoriteActivity.class);
+                    startActivity(intent);
                 }
 
+                if (mGenre == 0) {
 
-                DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
-                drawer.closeDrawer(GravityCompat.START);
+                    DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
+                    drawer.closeDrawer(GravityCompat.START);
 
-                // 質問のリストをクリアしてから再度Adapterにセットし、AdapterをListViewにセットし直す
-                mQuestionArrayList.clear();
-                mAdapter.setQuestionArrayList(mQuestionArrayList);
-                mListView.setAdapter(mAdapter);
+                    // 質問のリストをクリアしてから再度Adapterにセットし、AdapterをListViewにセットし直す
+                    mQuestionArrayList.clear();
+                    mAdapter.setQuestionArrayList(mQuestionArrayList);
+                    mListView.setAdapter(mAdapter);
 
-                // 選択したジャンルにリスナーを登録する
-                if (mGenreRef != null) {
-                    mGenreRef.removeEventListener(mEventListener);
+                    // 選択したジャンルにリスナーを登録する
+                    if (mGenreRef != null) {
+                        mGenreRef.removeEventListener(mEventListener);
+                    }
+                    mGenreRef = mDatabaseReference.child(Const.ContentsPATH).child(String.valueOf(mGenre));
+                    mGenreRef.addChildEventListener(mEventListener);
+
                 }
-                mGenreRef = mDatabaseReference.child(Const.ContentsPATH).child(String.valueOf(mGenre));
-                mGenreRef.addChildEventListener(mEventListener);
-
                 return true;
             }
         });
@@ -317,4 +320,24 @@ public class MainActivity extends AppCompatActivity {
 
         return super.onOptionsItemSelected(item);
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        // ログイン済みのユーザーを取得する
+        FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
+        if (user != null) {
+            // Firebase
+            DatabaseReference mDatabaseReference = FirebaseDatabase.getInstance().getReference();
+            DatabaseReference favoriteRef = mDatabaseReference.child(Const.FavoritePATH).child(user.getUid());
+            favoriteRef.addChildEventListener(mFavoriteListener);
+
+            navigationView.getMenu().findItem(R.id.nav_favorite).setVisible(true);
+        } else {
+            sFavoriteQidMap.clear();
+            navigationView.getMenu().findItem(R.id.nav_favorite).setVisible(false);
+        }
+    }
+
 }

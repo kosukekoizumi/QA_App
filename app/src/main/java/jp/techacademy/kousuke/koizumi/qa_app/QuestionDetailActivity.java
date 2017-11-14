@@ -19,6 +19,8 @@ import com.google.firebase.database.FirebaseDatabase;
 import java.util.HashMap;
 import java.util.Map;
 
+import static jp.techacademy.kousuke.koizumi.qa_app.MainActivity.sFavoriteQidMap;
+
 public class QuestionDetailActivity extends AppCompatActivity {
 
     private ListView mListView;
@@ -173,6 +175,8 @@ public class QuestionDetailActivity extends AppCompatActivity {
 
                     Snackbar.make(findViewById(android.R.id.content), "お気に入り解除しました。", Snackbar.LENGTH_LONG).show();
 
+                    sFavoriteQidMap.remove(mQuestion.getQuestionUid());
+
                     fabFavorite.setImageResource(android.R.drawable.btn_star_big_on);
 
                     favoriteFlag = false;
@@ -185,6 +189,8 @@ public class QuestionDetailActivity extends AppCompatActivity {
                     favoriteRef.setValue(data);
 
                     Snackbar.make(findViewById(android.R.id.content), "お気に入りに登録しました。", Snackbar.LENGTH_LONG).show();
+
+                    sFavoriteQidMap.put(mQuestion.getQuestionUid(), genre);
 
                     fabFavorite.setImageResource(android.R.drawable.btn_star_big_off);
                     favoriteFlag = true;
