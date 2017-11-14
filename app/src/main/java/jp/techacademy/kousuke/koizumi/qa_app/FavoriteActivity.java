@@ -28,6 +28,8 @@ import com.google.firebase.database.FirebaseDatabase;
 import java.util.ArrayList;
 import java.util.HashMap;
 
+import static jp.techacademy.kousuke.koizumi.qa_app.MainActivity.sFavoriteQidMap;
+
 
 public class FavoriteActivity extends AppCompatActivity {
 
@@ -42,35 +44,38 @@ public class FavoriteActivity extends AppCompatActivity {
     private ChildEventListener mEventListener = new ChildEventListener() {
         @Override
         public void onChildAdded(DataSnapshot dataSnapshot, String s) {
-            HashMap map = (HashMap) dataSnapshot.getValue();
-            String title = (String) map.get("title");
-            String body = (String) map.get("body");
-            String name = (String) map.get("name");
-            String uid = (String) map.get("uid");
-            String imageString = (String) map.get("image");
-            byte[] bytes;
-            if (imageString != null) {
-                bytes = Base64.decode(imageString, Base64.DEFAULT);
-            } else {
-                bytes = new byte[0];
-            }
-
-            ArrayList<Answer> answerArrayList = new ArrayList<Answer>();
-            HashMap answerMap = (HashMap) map.get("answers");
-            if (answerMap != null) {
-                for (Object key : answerMap.keySet()) {
-                    HashMap temp = (HashMap) answerMap.get((String) key);
-                    String answerBody = (String) temp.get("body");
-                    String answerName = (String) temp.get("name");
-                    String answerUid = (String) temp.get("uid");
-                    Answer answer = new Answer(answerBody, answerName, answerUid, (String) key);
-                    answerArrayList.add(answer);
+            if (sFavoriteQidMap.containsKey(dataSnapshot.getKey())) {
+                HashMap map = (HashMap) dataSnapshot.getValue();
+                String title = (String) map.get("title");
+                String body = (String) map.get("body");
+                String name = (String) map.get("name");
+                String uid = (String) map.get("uid");
+                String imageString = (String) map.get("image");
+                byte[] bytes;
+                if (imageString != null) {
+                    bytes = Base64.decode(imageString, Base64.DEFAULT);
+                } else {
+                    bytes = new byte[0];
                 }
-            }
 
-            Question question = new Question(title, body, name, uid, dataSnapshot.getKey(), mGenre, bytes, answerArrayList);
-            mQuestionArrayList.add(question);
-            mAdapter.notifyDataSetChanged();
+                ArrayList<Answer> answerArrayList = new ArrayList<Answer>();
+                HashMap answerMap = (HashMap) map.get("answers");
+                if (answerMap != null) {
+                    for (Object key : answerMap.keySet()) {
+                        HashMap temp = (HashMap) answerMap.get((String) key);
+                        String answerBody = (String) temp.get("body");
+                        String answerName = (String) temp.get("name");
+                        String answerUid = (String) temp.get("uid");
+                        Answer answer = new Answer(answerBody, answerName, answerUid, (String) key);
+                        answerArrayList.add(answer);
+                    }
+                }
+
+                int mGenre = Integer.parseInt(sFavoriteQidMap.get(dataSnapshot.getKey()));
+                Question question = new Question(title, body, name, uid, dataSnapshot.getKey(), mGenre, bytes, answerArrayList);
+                mQuestionArrayList.add(question);
+                mAdapter.notifyDataSetChanged();
+            }
         }
 
         @Override
@@ -127,6 +132,8 @@ public class FavoriteActivity extends AppCompatActivity {
         mListView = (ListView) findViewById(R.id.listView);
         mAdapter = new QuestionsListAdapter(this);
         mQuestionArrayList = new ArrayList<Question>();
+        mAdapter.setQuestionArrayList(mQuestionArrayList);
+        mListView.setAdapter(mAdapter);
         mAdapter.notifyDataSetChanged();
 
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
@@ -138,7 +145,6 @@ public class FavoriteActivity extends AppCompatActivity {
                 startActivity(intent);
             }
         });
-
     }
 
     @Override
@@ -147,4 +153,16 @@ public class FavoriteActivity extends AppCompatActivity {
         getMenuInflater().inflate(R.menu.menu_main, menu);
         return true;
     }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        mQuestionArrayList.clear();
+        for (int i = 1;i <= 4;i++) {
+            DatabaseReference mGenreRef = mDatabaseReference.child(Const.ContentsPATH).child(String.valueOf(i));
+            mGenreRef.addChildEventListener(mEventListener);
+        }
+    }
+
 };

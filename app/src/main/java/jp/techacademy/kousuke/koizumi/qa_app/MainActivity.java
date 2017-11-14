@@ -46,7 +46,7 @@ public class MainActivity extends AppCompatActivity {
 
     public static Map<String,String> sFavoriteQidMap;
     private String mFavoriteUid;
-    private ArrayList<Question> mFavoriteQuestionArrayList; //★
+    private ArrayList<Question> mFavoriteQuestionArrayList;
 
     private ChildEventListener mEventListener = new ChildEventListener() {
         @Override
@@ -134,50 +134,10 @@ public class MainActivity extends AppCompatActivity {
 
         }
 
-        // ★ ここから176行目までお気に入り一覧画面へ遷移の処理
-
-        ArrayList<Answer> mFavoriteQuestionArrayList = new ArrayList<Answer>();
-            if (sFavoriteQidMap != null) {
-            for (Object key : sFavoriteQidMap.keySet()) {
-                HashMap temp = (HashMap) sFavoriteQidMap.get((String) key);
-                String answerBody = (String) temp.get("body");
-                String answerName = (String) temp.get("name");
-                String answerUid = (String) temp.get("uid");
-                Answer favorite = new Answer(answerBody, answerName, answerUid, (String) key);
-                mFavoriteQuestionArrayList.add(favorite);
-            }
-        }
-
-        Question favorite = new Question(title, body, name, uid, dataSnapshot.getKey(), mGenre, bytes, mFavoriteQuestionArrayList);
-            mFavoriteQuestionArrayList.add(favorite);
-            mAdapter.notifyDataSetChanged();
-
     @Override
     public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-        HashMap map = (HashMap) dataSnapshot.getValue();
 
-        for (Question favorite: mFavoriteQuestionArrayList) {
-            if (dataSnapshot.getKey().equals(sFavoriteQidMap.get((String) key) {
-                 favorite.getAnswers().clear();
-                if (sFavoriteQidMap != null) {
-                    for (Object key : sFavoriteQidMap.keySet()) {
-                        HashMap temp = (HashMap) sFavoriteQidMap.get((String) key);
-                        String answerBody = (String) temp.get("body");
-                        String answerName = (String) temp.get("name");
-                        String answerUid = (String) temp.get("uid");
-                        Answer favorite = new Answer(answerBody, answerName, answerUid, (String) key);
-                        mFavoriteQuestionArrayList.add(favorite);
-                    }
-                }
-
-                mAdapter.notifyDataSetChanged();
-            }
         }
-    }
-
-        @Override
-        public void onChildChanged(DataSnapshot dataSnapshot, String s) {
-                    }
 
         @Override
         public void onChildRemoved(DataSnapshot dataSnapshot) {
@@ -201,6 +161,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         mToolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(mToolbar);
+        sFavoriteQidMap = new HashMap<>();
 
         FloatingActionButton fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
@@ -258,17 +219,15 @@ public class MainActivity extends AppCompatActivity {
                     startActivity(intent);
                 }
 
-                if (mGenre == 0) {
+                if (mGenre != 0) {
 
                     DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
                     drawer.closeDrawer(GravityCompat.START);
 
-                    // 質問のリストをクリアしてから再度Adapterにセットし、AdapterをListViewにセットし直す
                     mQuestionArrayList.clear();
                     mAdapter.setQuestionArrayList(mQuestionArrayList);
                     mListView.setAdapter(mAdapter);
 
-                    // 選択したジャンルにリスナーを登録する
                     if (mGenreRef != null) {
                         mGenreRef.removeEventListener(mEventListener);
                     }
@@ -280,10 +239,8 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
-        // Firebase
         mDatabaseReference = FirebaseDatabase.getInstance().getReference();
 
-        // ListViewの準備
         mListView = (ListView) findViewById(R.id.listView);
         mAdapter = new QuestionsListAdapter(this);
         mQuestionArrayList = new ArrayList<Question>();
@@ -292,7 +249,6 @@ public class MainActivity extends AppCompatActivity {
         mListView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
             @Override
             public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                // Questionのインスタンスを渡して質問詳細画面を起動する
                 Intent intent = new Intent(getApplicationContext(), QuestionDetailActivity.class);
                 intent.putExtra("question", mQuestionArrayList.get(position));
                 startActivity(intent);
@@ -317,7 +273,6 @@ public class MainActivity extends AppCompatActivity {
             startActivity(intent);
             return true;
         }
-
         return super.onOptionsItemSelected(item);
     }
 
@@ -325,7 +280,6 @@ public class MainActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
 
-        // ログイン済みのユーザーを取得する
         FirebaseUser user = FirebaseAuth.getInstance().getCurrentUser();
         if (user != null) {
             // Firebase
